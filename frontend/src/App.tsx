@@ -2,7 +2,7 @@ import './App.css'
 import { motion } from 'motion/react'
 import { Button } from "@/components/ui/button"
 import { useState } from 'react'
-import { SignInButton } from '@clerk/clerk-react'
+import { SignInButton, useUser } from '@clerk/clerk-react'
 
 function App() {
   const [selected, setSelect] = useState('1')
@@ -10,14 +10,13 @@ function App() {
   const staggerChildrenButtonNotSelected = { outline: '1px', outlineColor: 'white', outlineStyle: 'solid' }
   const staggerChildrenButtonSelected = { outline: '1px', outlineColor: '#e151f7', outlineStyle: 'solid' }
 
-
   return (
     <div className='bg-[#15141B] divide-y divide-slate-800'>
       <div className='bg-[rgb(21,20,27)] min-h-screen bg-[linear-gradient(15deg,_rgba(21,20,27,1)_9%,_rgba(22,19,37,1)_26%,_rgba(38,12,79,1)_60%,_rgba(52,5,119,1)_80%,_rgba(56,3,129,1)_90%)] items-center flex-col flex px-16 py-14 text-white'>
         <h1 className='text-6xl font-bold text-center mt-10'><span className='bg-clip-text text-transparent bg-gradient-to-r from-[#e151f7] to-[#5c47f5]'>Transform Your Ideas</span><br />Into Actionable Workflows Instantly!</h1>
         <p className='text-center mt-6 text-lg'>Whether you’re an automation beginner or an expert, Autoflow enables you to craft, customize, and deploy<br />Kestra workflows with just a few words. No coding or configuration required.</p>
         <span className='mt-8 w-[26rem] flex justify-between'>
-          <SignInButton>
+          <SignInButton forceRedirectUrl={'/dashboard'}>
             <Button className='bg-[#4b0baa8f] text-lg hover:bg-[#4b0baa] px-5 py-5'>Get Started for Free</Button>
           </SignInButton>
           <Button className='hover:bg-[#323236] text-lg px-5 py-5'>Explore Demo</Button>

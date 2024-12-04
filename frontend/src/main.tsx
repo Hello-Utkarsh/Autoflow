@@ -21,9 +21,9 @@ const router = createBrowserRouter([
     element: <App />,
   },
   {
-    path: '/dashboard',
+    path: 'dashboard',
     element: <Dashboard />
-  }
+  },
 ]);
 
 createRoot(document.getElementById('root')!).render(
