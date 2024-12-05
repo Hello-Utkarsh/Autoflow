@@ -1,7 +1,6 @@
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@clerk/clerk-react'
 import { motion } from 'motion/react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 function Dashboard() {
     const [open, setOpen] = useState(true)
