@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 function Dashboard() {
     const [open, setOpen] = useState(false)
+
     return (
         <div className='bg-[rgb(21,20,27)] min-h-screen bg-[linear-gradient(15deg,_rgba(21,20,27,1)_9%,_rgba(22,19,37,1)_26%,_rgba(38,12,79,1)_50%,_rgba(52,5,119,1)_75%,_rgba(56,3,129,1)_87%)] relative flex lg:px-3'>
             <div className='flex z-10 lg:mt-4 w-[60vw] sm:w-[45vw] md:w-[35vw] lg:w-[28vw] xl:w-[20rem] absolute'>

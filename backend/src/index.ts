@@ -1,29 +1,18 @@
-import { verifyToken } from "@clerk/backend";
 import "dotenv/config";
-import { Request, Response } from "express";
+import chat from "./routes/chat";
+import authMiddleware from "./middleware";
 const express = require("express");
 const app = express();
 const cors = require("cors");
 const port = 3000;
+const bodyParser = require("body-parser");
 
 const corsOptions = {
   origin: "*",
 };
+app.use(bodyParser.json());
 app.use(cors(corsOptions));
-
-// @ts-ignore
-app.get("/", (req, res) => {
-  res.json({ message: "Hello World!" });
-});
-
-// @ts-ignore
-app.get("/bye", (req, res) => {
-  res.json({ message: "Bye World!" });
-});
-
-app.get("/protected", (req: any, res: any) => {
-  res.json({ message: "This is a protected route" });
-});
+app.use('/chat', authMiddleware ,chat)
 
 app.listen(port, () => {
   console.log("connected");
