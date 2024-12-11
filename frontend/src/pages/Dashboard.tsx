@@ -4,11 +4,17 @@ import { useState } from 'react'
 
 function Dashboard() {
     const [open, setOpen] = useState(false)
+    const [selectedChat, selectChat] = useState("1")
 
     return (
         <div className='bg-[rgb(21,20,27)] min-h-screen bg-[linear-gradient(15deg,_rgba(21,20,27,1)_9%,_rgba(22,19,37,1)_26%,_rgba(38,12,79,1)_50%,_rgba(52,5,119,1)_75%,_rgba(56,3,129,1)_87%)] relative flex lg:px-3'>
             <div className='flex z-10 lg:mt-4 w-[60vw] sm:w-[45vw] md:w-[35vw] lg:w-[28vw] xl:w-[20rem] absolute'>
-                <motion.div initial={open ? 'hidden' : 'visible'} variants={{ hidden: { width: 0, opacity: 0 }, visible: { width: '100%', opacity: 1, transition: { duration: 0.5, delay: 0.2 } } }} animate={open ? 'visible' : 'hidden'} className='h-[100vh] bg-[#340577] rounded-md lg:h-[95vh]'>
+                <motion.div initial={open ? 'hidden' : 'visible'} variants={{ hidden: { width: 0, opacity: 0 }, visible: { width: '100%', opacity: 1, transition: { duration: 0.5, delay: 0.2 } } }} animate={open ? 'visible' : 'hidden'} className='h-[100vh] bg-[#340577] rounded-md lg:h-[95vh] py-10'>
+                    <motion.span variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0, transition: { delay: 0.7, duration: 0.4 } } }} animate={open ? 'visible' : 'hidden'} className='text-white font-medium mx-2 mb-8 flex flex-col'>
+                        <p className='px-2 mb-2'>Yesterday</p>
+                        <p id='1' className='px-2 h-fit py-2 items-center flex justify-between text-white font-normal cursor-pointer rounded-md' onClick={(e: any) => selectChat(e.target.id)} style={selectedChat == "1" ? { backgroundColor: "#49109a" } : undefined}>Lorem ipsum dolor sit amet <img className='h-4' src="trash.png" alt="" /></p>
+                        <p id='1' className='px-2 h-fit py-2 items-center flex justify-between text-white font-normal cursor-pointer rounded-md' onClick={(e: any) => selectChat(e.target.id)} style={selectedChat == "1" ? { backgroundColor: "#49109a" } : undefined}>Lorem ipsum dolor sit amet <img className='h-4' src="trash.png" alt="" /></p>
+                    </motion.span>
                 </motion.div>
                 <motion.span className='bg-transparent' variants={{ hidden: { x: 0, y: 5 }, visible: { x: -70, y: 5, transition: { delay: 0.2, duration: 0.5 } } }} initial={open ? 'hidden' : 'visible'} whileInView={open ? 'visible' : 'hidden'}>
                     <Button className='w-fit mx-1 my-2 bg-transparent hover:bg-transparent flex flex-col items-start leading-3 shadow-none relative' onClick={() => setOpen((prev) => !prev)}>
