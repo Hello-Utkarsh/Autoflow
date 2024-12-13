@@ -1,6 +1,14 @@
 import { Button } from '@/components/ui/button'
 import { motion } from 'motion/react'
 import { useState } from 'react'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+
 
 function Dashboard() {
     const [open, setOpen] = useState(false)
@@ -12,8 +20,36 @@ function Dashboard() {
                 <motion.div initial={open ? 'hidden' : 'visible'} variants={{ hidden: { width: 0, opacity: 0 }, visible: { width: '100%', opacity: 1, transition: { duration: 0.5, delay: 0.2 } } }} animate={open ? 'visible' : 'hidden'} className='h-[100vh] bg-[#340577] rounded-md lg:h-[95vh] py-10'>
                     <motion.span variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0, transition: { delay: 0.7, duration: 0.4 } } }} animate={open ? 'visible' : 'hidden'} className='text-white font-medium mx-2 mb-8 flex flex-col'>
                         <p className='px-2 mb-2'>Yesterday</p>
-                        <p id='1' className='px-2 h-fit py-2 items-center flex justify-between text-white font-normal cursor-pointer rounded-md' onClick={(e: any) => selectChat(e.target.id)} style={selectedChat == "1" ? { backgroundColor: "#49109a" } : undefined}>Lorem ipsum dolor sit amet <img className='h-4' src="trash.png" alt="" /></p>
-                        <p id='1' className='px-2 h-fit py-2 items-center flex justify-between text-white font-normal cursor-pointer rounded-md' onClick={(e: any) => selectChat(e.target.id)} style={selectedChat == "1" ? { backgroundColor: "#49109a" } : undefined}>Lorem ipsum dolor sit amet <img className='h-4' src="trash.png" alt="" /></p>
+                        <span id='1' className='flex px-2 py-2  text-white rounded-md cursor-pointer w-full justify-between items-center' onClick={(e: any) => selectChat(e.currentTarget.id)} style={selectedChat == "1" ? { backgroundColor: "#49109a" } : undefined}>
+                            <p className='h-fit font-normal w-full'>Lorem ipsum dolor sit amet</p>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger className='flex gap-1 w-5 h-fit justify-between'>
+                                    <span className='h-1 rounded-full w-1 bg-white' />
+                                    <span className='h-1 rounded-full w-1 bg-white' />
+                                    <span className='h-1 rounded-full w-1 bg-white' />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className='bg-[#340577] text-white'>
+                                    <DropdownMenuItem className='focus:bg-[#49109a] focus:text-white'>Edit</DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className='focus:bg-[#49109a] focus:text-white'>Delete</DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </span>
+                        <span id='2' className='flex px-2 py-2  text-white rounded-md cursor-pointer w-full justify-between items-center' onClick={(e: any) => selectChat(e.currentTarget.id)} style={selectedChat == "2" ? { backgroundColor: "#49109a" } : undefined}>
+                            <p className='h-fit font-normal w-full'>Lorem ipsum dolor sit amet</p>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger className='flex gap-1 w-5 h-fit justify-between'>
+                                    <span className='h-1 rounded-full w-1 bg-white' />
+                                    <span className='h-1 rounded-full w-1 bg-white' />
+                                    <span className='h-1 rounded-full w-1 bg-white' />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className='bg-[#340577] text-white'>
+                                    <DropdownMenuItem className='focus:bg-[#49109a] focus:text-white'>Edit</DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className='focus:bg-[#49109a] focus:text-white'>Delete</DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </span>
                     </motion.span>
                 </motion.div>
                 <motion.span className='bg-transparent' variants={{ hidden: { x: 0, y: 5 }, visible: { x: -70, y: 5, transition: { delay: 0.2, duration: 0.5 } } }} initial={open ? 'hidden' : 'visible'} whileInView={open ? 'visible' : 'hidden'}>

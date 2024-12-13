@@ -25,7 +25,8 @@ message.get("/", async (req: Request, res: Response) => {
 
 message.post("/", async (req: Request, res: Response) => {
   try {
-    const { userPrompt, userid, chatid } = await req.body;
+    const {chatid} = req.query
+    const { userPrompt, userid } = await req.body;
     if (!userid) {
       return res
         .status(404)
