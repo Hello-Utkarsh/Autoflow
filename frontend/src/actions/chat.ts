@@ -22,6 +22,7 @@ export async function createChat(token: string) {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
+        "Content-Type": 'application/json'
       },
       body: JSON.stringify({
         name: "New Chat",
@@ -43,6 +44,7 @@ export async function editChat(token: string, name: string) {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
+        "Content-Type": 'application/json'
       },
       body: JSON.stringify({ name }),
     });
@@ -59,9 +61,10 @@ export async function editChat(token: string, name: string) {
 export async function deleteChat(token: string, chatid: string) {
   try {
     const req = await fetch(`${import.meta.env.VITE_PORT}/chat`, {
-      method: "POST",
+      method: "DELETE",
       headers: {
         Authorization: `Bearer ${token}`,
+        "Content-Type": 'application/json'
       },
       body: JSON.stringify({ chatid }),
     });

@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { motion } from 'motion/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useAuth } from '@clerk/clerk-react'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -8,49 +9,208 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { createChat, deleteChat, getChat } from '@/actions/chat'
+import { useNavigate } from 'react-router-dom'
+import { Toaster } from "@/components/ui/toaster"
+import { getMessages } from '@/actions/message'
+import { useToast } from '@/hooks/use-toast'
 
 
 function Dashboard() {
     const [open, setOpen] = useState(false)
     const [selectedChat, selectChat] = useState("1")
+    const [prompt, setPrompt] = useState("")
+    const { getToken } = useAuth()
+    const [chats, setChats] = useState<{ today: { id: string, userid: string, created: Date, name: string, }[], yesterday: { id: string, userid: string, created: Date, name: string, }[], older: { id: string, userid: string, created: Date, name: string, }[] }>({ today: [], yesterday: [], older: [] })
+    const [message, setMessage] = useState<{ id: string, created: Date, userid: string, chatid: string, content: { prompt: string, yaml: string } }[]>()
+    const navigate = useNavigate()
+    const { toast } = useToast()
+
+    useEffect(() => {
+        getPrompts()
+    }, [])
+
+    const sortDate = (data: any, funType?: string) => {
+        const now = new Date()
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const yesterday = new Date(today)
+        yesterday.setDate(today.getDate() - 1)
+        const updatedChat = {
+            today: [...chats.today],
+            yesterday: [...chats.yesterday],
+            older: [...chats.older],
+        }
+        if (funType == 'del') {
+            console.log(data)
+            console.log(updatedChat)
+            if (new Date(data.created) >= today) {
+                updatedChat.today = updatedChat.today.filter((e) => e.id != data.id)
+            } else if (new Date(data.created) >= yesterday) {
+                updatedChat.yesterday = updatedChat.yesterday.filter((e) => e.id != data.id)
+            } else {
+                updatedChat.older = updatedChat.older.filter((e) => e.id != data.id)
+            }
+            console.log(updatedChat)
+            setChats(updatedChat)
+            return
+        }
+        if (funType == 'add') {
+            if (new Date(data.created) >= today) {
+                updatedChat.today.push(data)
+            } else if (new Date(data.created) >= yesterday) {
+                updatedChat.yesterday.push(data)
+            } else {
+                updatedChat.older.push(data)
+            }
+            console.log(updatedChat)
+            setChats(updatedChat)
+            return
+        }
+        data.map((e: any) => {
+            if (updatedChat?.today.find((f) => { return f.id == e.id }) || updatedChat?.yesterday.find((f) => { return f.id == e.id }) || updatedChat?.older.find((f) => { return f.id == e.id })) {
+                return
+            }
+            if (new Date(e.created) >= today) {
+                updatedChat.today.push(e)
+            } else if (new Date(e.created) >= yesterday) {
+                updatedChat.yesterday.push(e)
+            } else {
+                updatedChat.older.push(e)
+            }
+        })
+        setChats(updatedChat)
+    }
+
+    const getPrompts = async () => {
+        const token = await getToken()
+        if (token) {
+            const res = await getChat(token)
+            console.log(res)
+            if (res.data) {
+                sortDate(res.data)
+                return
+            }
+            toast({ description: res.message })
+            return
+        }
+        navigate('/')
+    }
+
+    const handlePrompt = async () => {
+        const token = await getToken()
+        if (token) {
+            const res: { message: string, data: { id: string, userid: string, created: Date, name: string, }[] } = await createChat(token)
+            if (res.data) {
+                console.log(res.data[0])
+                sortDate(res.data[0], 'add')
+                return
+            }
+            toast({ description: res.message })
+            return
+        }
+        navigate('/')
+    }
+
+    const handleDelete = async (chatid: string) => {
+        const token = await getToken()
+        if (token) {
+            const res = await deleteChat(token, chatid)
+            if (res.data) {
+                sortDate(res.data[0], 'del')
+                return
+            }
+            toast({ description: res.message })
+            return
+        }
+        navigate('/')
+    }
+
+    const handleMessage = async (chatid: string) => {
+        const token = await getToken()
+        if (token) {
+            const res = await getMessages(token, chatid)
+            // if (res.data) {
+            //     const dummyMessages = chats || []
+            //     dummyMessages.push(res.data)
+            //     setChats(dummyMessages)
+            //     return
+            // }
+            toast({ description: res.message })
+            return
+        }
+        navigate('/')
+    }
 
     return (
         <div className='bg-[rgb(21,20,27)] min-h-screen bg-[linear-gradient(15deg,_rgba(21,20,27,1)_9%,_rgba(22,19,37,1)_26%,_rgba(38,12,79,1)_50%,_rgba(52,5,119,1)_75%,_rgba(56,3,129,1)_87%)] relative flex lg:px-3'>
             <div className='flex z-10 lg:mt-4 w-[60vw] sm:w-[45vw] md:w-[35vw] lg:w-[28vw] xl:w-[20rem] absolute'>
-                <motion.div initial={open ? 'hidden' : 'visible'} variants={{ hidden: { width: 0, opacity: 0 }, visible: { width: '100%', opacity: 1, transition: { duration: 0.5, delay: 0.2 } } }} animate={open ? 'visible' : 'hidden'} className='h-[100vh] bg-[#340577] rounded-md lg:h-[95vh] py-10'>
-                    <motion.span variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0, transition: { delay: 0.7, duration: 0.4 } } }} animate={open ? 'visible' : 'hidden'} className='text-white font-medium mx-2 mb-8 flex flex-col'>
+                <motion.div initial={open ? 'hidden' : 'visible'} variants={{ hidden: { width: 0, opacity: 0 }, visible: { width: '100%', opacity: 1, transition: { duration: 0.5, delay: 0.2 } } }} animate={open ? 'visible' : 'hidden'} className='h-[100vh] bg-[#340577] overflow-y-auto rounded-md lg:h-[95vh] py-10'>
+                    {chats?.today.length > 0 && <motion.span id='today' variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0, transition: { delay: 0.7, duration: 0.4 } } }} animate={open ? 'visible' : 'hidden'} className='text-white font-medium mx-2 mb-8 flex flex-col'>
+                        <p className='px-2 mb-2'>Today</p>
+                        {chats?.today.map((data) => {
+                            return (
+                                <span id={data.id} className='flex px-2 py-2  text-white rounded-md cursor-pointer w-full justify-between items-center' onClick={(e: any) => selectChat(e.currentTarget.id)} style={selectedChat == data.id ? { backgroundColor: "#49109a" } : undefined}>
+                                    <p className='h-fit font-normal w-full'>{data.name}</p>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger className='flex gap-1 w-5 h-fit justify-between'>
+                                            <span className='h-1 rounded-full w-1 bg-white' />
+                                            <span className='h-1 rounded-full w-1 bg-white' />
+                                            <span className='h-1 rounded-full w-1 bg-white' />
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent className='bg-[#340577] text-white'>
+                                            <DropdownMenuItem className='focus:bg-[#49109a] focus:text-white'>Edit</DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onClick={() => { handleDelete(data.id) }} className='focus:bg-[#49109a] focus:text-white'>Delete</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </span>
+                            )
+                        })}
+                    </motion.span>}
+                    {chats?.yesterday.length > 0 && <motion.span id='yesterday' variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0, transition: { delay: 0.7, duration: 0.4 } } }} animate={open ? 'visible' : 'hidden'} className='text-white font-medium mx-2 mb-8 flex flex-col'>
                         <p className='px-2 mb-2'>Yesterday</p>
-                        <span id='1' className='flex px-2 py-2  text-white rounded-md cursor-pointer w-full justify-between items-center' onClick={(e: any) => selectChat(e.currentTarget.id)} style={selectedChat == "1" ? { backgroundColor: "#49109a" } : undefined}>
-                            <p className='h-fit font-normal w-full'>Lorem ipsum dolor sit amet</p>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger className='flex gap-1 w-5 h-fit justify-between'>
-                                    <span className='h-1 rounded-full w-1 bg-white' />
-                                    <span className='h-1 rounded-full w-1 bg-white' />
-                                    <span className='h-1 rounded-full w-1 bg-white' />
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className='bg-[#340577] text-white'>
-                                    <DropdownMenuItem className='focus:bg-[#49109a] focus:text-white'>Edit</DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem className='focus:bg-[#49109a] focus:text-white'>Delete</DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </span>
-                        <span id='2' className='flex px-2 py-2  text-white rounded-md cursor-pointer w-full justify-between items-center' onClick={(e: any) => selectChat(e.currentTarget.id)} style={selectedChat == "2" ? { backgroundColor: "#49109a" } : undefined}>
-                            <p className='h-fit font-normal w-full'>Lorem ipsum dolor sit amet</p>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger className='flex gap-1 w-5 h-fit justify-between'>
-                                    <span className='h-1 rounded-full w-1 bg-white' />
-                                    <span className='h-1 rounded-full w-1 bg-white' />
-                                    <span className='h-1 rounded-full w-1 bg-white' />
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className='bg-[#340577] text-white'>
-                                    <DropdownMenuItem className='focus:bg-[#49109a] focus:text-white'>Edit</DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem className='focus:bg-[#49109a] focus:text-white'>Delete</DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </span>
-                    </motion.span>
+                        {chats?.yesterday.map((data) => {
+                            return (
+                                <span id={data.id} className='flex px-2 py-2  text-white rounded-md cursor-pointer w-full justify-between items-center' onClick={(e: any) => selectChat(e.currentTarget.id)} style={selectedChat == data.id ? { backgroundColor: "#49109a" } : undefined}>
+                                    <p className='h-fit font-normal w-full'>{data.name}</p>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger className='flex gap-1 w-5 h-fit justify-between'>
+                                            <span className='h-1 rounded-full w-1 bg-white' />
+                                            <span className='h-1 rounded-full w-1 bg-white' />
+                                            <span className='h-1 rounded-full w-1 bg-white' />
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent className='bg-[#340577] text-white'>
+                                            <DropdownMenuItem className='focus:bg-[#49109a] focus:text-white'>Edit</DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onClick={() => { handleDelete(data.id) }} className='focus:bg-[#49109a] focus:text-white'>Delete</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </span>
+                            )
+                        })}
+                    </motion.span>}
+                    {chats?.older.length > 0 && <motion.span id='older' variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0, transition: { delay: 0.7, duration: 0.4 } } }} animate={open ? 'visible' : 'hidden'} className='text-white font-medium mx-2 mb-8 flex flex-col gap-1'>
+                        <p className='px-2 mb-2'>Last 30 Days</p>
+                        {chats?.older.map((data) => {
+                            return (
+                                <span id={data.id} className='flex px-2 py-2  text-white rounded-md cursor-pointer w-full justify-between items-center' onClick={(e: any) => selectChat(e.currentTarget.id)} style={selectedChat == data.id ? { backgroundColor: "#49109a" } : undefined}>
+                                    <p className='h-fit font-normal w-full'>{data.name}</p>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger className='flex gap-1 w-5 h-fit justify-between'>
+                                            <span className='h-1 rounded-full w-1 bg-white' />
+                                            <span className='h-1 rounded-full w-1 bg-white' />
+                                            <span className='h-1 rounded-full w-1 bg-white' />
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent className='bg-[#340577] text-white'>
+                                            <DropdownMenuItem className='focus:bg-[#49109a] focus:text-white'>Edit</DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onClick={() => { handleDelete(data.id) }} className='focus:bg-[#49109a] focus:text-white'>Delete</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </span>
+                            )
+                        })}
+                    </motion.span>}
                 </motion.div>
                 <motion.span className='bg-transparent' variants={{ hidden: { x: 0, y: 5 }, visible: { x: -70, y: 5, transition: { delay: 0.2, duration: 0.5 } } }} initial={open ? 'hidden' : 'visible'} whileInView={open ? 'visible' : 'hidden'}>
                     <Button className='w-fit mx-1 my-2 bg-transparent hover:bg-transparent flex flex-col items-start leading-3 shadow-none relative' onClick={() => setOpen((prev) => !prev)}>
@@ -87,13 +247,18 @@ function Dashboard() {
                 viewport={{ once: true }}
                 animate={{ opacity: 1, y: 0, transition: { duration: 0.5 } }}
                 className='w-[84%] absolute bottom-6 left-[8%] flex gap-2 sm:w-[64%] sm:left-[18%] lg:w-[50%] lg:bottom-10 lg:left-[25%] lg:h-fit xl:w-[40%] xl:left-[30%]'>
-                <input type="text" className='bg-[#340577] w-full rounded-md px-1 py-1 text-white h-8' />
+                <input onChange={(e) => setPrompt(e.target.value)} onKeyDown={(event: any) => {
+                    if (event.key == 'Enter') {
+                        handlePrompt()
+                    }
+                }} type="text" className='bg-[#340577] w-full rounded-md px-1 py-1 text-white h-8' />
                 <div className="p-[1.5px] rounded-lg bg-gradient-to-r from-[#e151f7] to-[#5c47f5]">
-                    <Button className="bg-black text-white rounded-lg h-8 px-3 text-xs lg:px-4 lg:py-2 lg:text-base">
+                    <Button onClick={handlePrompt} className="bg-black text-white rounded-lg h-8 px-3 text-xs lg:px-4 lg:py-2 lg:text-base">
                         Generate
                     </Button>
                 </div>
             </motion.span>
+            <Toaster />
         </div>
     )
 }

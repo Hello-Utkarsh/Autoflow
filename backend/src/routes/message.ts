@@ -52,7 +52,7 @@ message.post("/", async (req: Request, res: Response) => {
       chatid,
       `${JSON.stringify({ prompt: userPrompt, response: modelResponse })}`,
     ]);
-    return res.json({ message: runQuery.rows[0] });
+    return res.json({ message: 'Success', data: runQuery.rows[0] });
   } catch (error) {
     console.log(error);
     return res

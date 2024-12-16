@@ -14,7 +14,7 @@ chat.get("/", async (req: Request, res: Response) => {
     const getUserChat = `
           SELECT * FROM chat WHERE userid=$1`;
     const runQuery = await query(getUserChat, [userid]);
-    return res.status(200).json({message: runQuery.rows[0]});
+    return res.status(200).json({ message: "Success", data: runQuery.rows });
   } catch (error) {
     console.log(error);
     return res
@@ -32,9 +32,9 @@ chat.delete("/", async (req: Request, res: Response) => {
         .json({ message: "Please provide the required data" });
     }
     const deleteUserChat = `
-        DELETE FROM chat WHERE userid=$1 AND id=$2`;
+        DELETE FROM chat WHERE userid=$1 AND id=$2 RETURNING *`;
     const runQuery = await query(deleteUserChat, [userid, chatid]);
-    return res.status(200).json({message: runQuery.rows[0]});
+    return res.status(200).json({ message: "Success", data: runQuery.rows });
   } catch (error) {
     console.log(error);
     return res
@@ -53,9 +53,9 @@ chat.post("/", async (req: Request, res: Response) => {
     }
     const currentTime = new Date();
     const createTable = `
-        INSERT INTO chat(userid, created, name) VALUES ($1, $2, $3)`;
+        INSERT INTO chat(userid, created, name) VALUES ($1, $2, $3) RETURNING *`;
     const runQuery = await query(createTable, [userid, currentTime, name]);
-    return res.status(200).json({message: runQuery.rows[0]});
+    return res.status(200).json({ message: "Success", data: runQuery.rows });
   } catch (error) {
     console.log(error);
     return res
@@ -71,9 +71,9 @@ chat.put("/", async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Please the required data" });
     }
     const updateUserChat = `
-          UPDATE chat SET name=$1 WHERE userid=$2 and id=$3`;
+          UPDATE chat SET name=$1 WHERE userid=$2 and id=$3 RETURNING *`;
     const runQuery = await query(updateUserChat, [name, userid, id]);
-    return res.status(200).json({message: runQuery.rows[0]});
+    return res.status(200).json({ message: "Success", data: runQuery.rows });
   } catch (error) {
     console.log(error);
     return res
