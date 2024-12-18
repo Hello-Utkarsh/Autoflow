@@ -68,7 +68,7 @@ chat.put("/", async (req: Request, res: Response) => {
   try {
     const { userid, id, name } = await req.body;
     if (!name || !id) {
-      return res.status(404).json({ message: "Please the required data" });
+      return res.status(400).json({ message: "Please the required data" });
     }
     const updateUserChat = `
           UPDATE chat SET name=$1 WHERE userid=$2 and id=$3 RETURNING *`;

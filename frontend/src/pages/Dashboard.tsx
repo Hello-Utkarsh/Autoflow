@@ -9,7 +9,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { createChat, deleteChat, getChat } from '@/actions/chat'
+import { createChat, deleteChat, getChat, updateChat } from '@/actions/chat'
 import { useNavigate } from 'react-router-dom'
 import { Toaster } from "@/components/ui/toaster"
 import { getMessages } from '@/actions/message'
@@ -25,6 +25,8 @@ function Dashboard() {
     const [message, setMessage] = useState<{ id: string, created: Date, userid: string, chatid: string, content: { prompt: string, yaml: string } }[]>()
     const navigate = useNavigate()
     const { toast } = useToast()
+    const [editChat, activateEdit] = useState('')
+    const [chatName, setChatName] = useState('')
 
     useEffect(() => {
         getPrompts()
@@ -40,9 +42,19 @@ function Dashboard() {
             yesterday: [...chats.yesterday],
             older: [...chats.older],
         }
+        if (funType == 'update') {
+            if (new Date(data.created) >= today) {
+                updatedChat.today = updatedChat.today.filter((e) => e.id != data.id)
+            } else if (new Date(data.created) >= yesterday) {
+                updatedChat.yesterday = [updatedChat.today.filter((e) => e.id != data.id), data]
+            } else {
+                updatedChat.older = [...updatedChat.older.filter((e) => e.id != data.id), data]
+            }
+            setChats(updatedChat)
+            activateEdit("")
+            return
+        }
         if (funType == 'del') {
-            console.log(data)
-            console.log(updatedChat)
             if (new Date(data.created) >= today) {
                 updatedChat.today = updatedChat.today.filter((e) => e.id != data.id)
             } else if (new Date(data.created) >= yesterday) {
@@ -85,7 +97,6 @@ function Dashboard() {
         const token = await getToken()
         if (token) {
             const res = await getChat(token)
-            console.log(res)
             if (res.data) {
                 sortDate(res.data)
                 return
@@ -125,6 +136,20 @@ function Dashboard() {
         navigate('/')
     }
 
+    const handleChatpdate = async (id: string, name: string) => {
+        const token = await getToken()
+        console.log(id, name)
+        if (token) {
+            const res = await updateChat(token, id, name)
+            if (res.data) {
+                sortDate(res.data[0], 'update')
+                return
+            }
+            return
+        }
+        navigate('/')
+    }
+
     const handleMessage = async (chatid: string) => {
         const token = await getToken()
         if (token) {
@@ -148,6 +173,17 @@ function Dashboard() {
                     {chats?.today.length > 0 && <motion.span id='today' variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0, transition: { delay: 0.7, duration: 0.4 } } }} animate={open ? 'visible' : 'hidden'} className='text-white font-medium mx-2 mb-8 flex flex-col'>
                         <p className='px-2 mb-2'>Today</p>
                         {chats?.today.map((data) => {
+                            if (editChat == data.id) {
+                                return (
+                                    <span className='flex px-2 text-white rounded-md cursor-pointer w-full justify-between items-center gap-1'>
+                                        <input className='bg-[#49109a] w-full rounded-md px-1 py-1 text-white h-8' type="text" />
+                                        <span className='flex'>
+                                            <img onClick={() => { activateEdit("") }} className='h-6 cursor-pointer' src="/close.png" alt="" />
+                                            <img className='h-6 cursor-pointer' src="/check.png" alt="" />
+                                        </span>
+                                    </span>
+                                )
+                            }
                             return (
                                 <span id={data.id} className='flex px-2 py-2  text-white rounded-md cursor-pointer w-full justify-between items-center' onClick={(e: any) => selectChat(e.currentTarget.id)} style={selectedChat == data.id ? { backgroundColor: "#49109a" } : undefined}>
                                     <p className='h-fit font-normal w-full'>{data.name}</p>
@@ -158,7 +194,7 @@ function Dashboard() {
                                             <span className='h-1 rounded-full w-1 bg-white' />
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent className='bg-[#340577] text-white'>
-                                            <DropdownMenuItem className='focus:bg-[#49109a] focus:text-white'>Edit</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => { activateEdit(data.id) }} className='focus:bg-[#49109a] focus:text-white'>Edit</DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem onClick={() => { handleDelete(data.id) }} className='focus:bg-[#49109a] focus:text-white'>Delete</DropdownMenuItem>
                                         </DropdownMenuContent>
@@ -170,6 +206,17 @@ function Dashboard() {
                     {chats?.yesterday.length > 0 && <motion.span id='yesterday' variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0, transition: { delay: 0.7, duration: 0.4 } } }} animate={open ? 'visible' : 'hidden'} className='text-white font-medium mx-2 mb-8 flex flex-col'>
                         <p className='px-2 mb-2'>Yesterday</p>
                         {chats?.yesterday.map((data) => {
+                            if (editChat == data.id) {
+                                return (
+                                    <span className='flex px-2 text-white rounded-md cursor-pointer w-full justify-between items-center gap-1'>
+                                        <input className='bg-[#49109a] w-full rounded-md px-1 py-1 text-white h-8' type="text" />
+                                        <span className='flex'>
+                                            <img onClick={() => { activateEdit("") }} className='h-6 cursor-pointer' src="/close.png" alt="" />
+                                            <img className='h-6 cursor-pointer' src="/check.png" alt="" />
+                                        </span>
+                                    </span>
+                                )
+                            }
                             return (
                                 <span id={data.id} className='flex px-2 py-2  text-white rounded-md cursor-pointer w-full justify-between items-center' onClick={(e: any) => selectChat(e.currentTarget.id)} style={selectedChat == data.id ? { backgroundColor: "#49109a" } : undefined}>
                                     <p className='h-fit font-normal w-full'>{data.name}</p>
@@ -180,7 +227,7 @@ function Dashboard() {
                                             <span className='h-1 rounded-full w-1 bg-white' />
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent className='bg-[#340577] text-white'>
-                                            <DropdownMenuItem className='focus:bg-[#49109a] focus:text-white'>Edit</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => { activateEdit(data.id) }} className='focus:bg-[#49109a] focus:text-white'>Edit</DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem onClick={() => { handleDelete(data.id) }} className='focus:bg-[#49109a] focus:text-white'>Delete</DropdownMenuItem>
                                         </DropdownMenuContent>
@@ -192,6 +239,17 @@ function Dashboard() {
                     {chats?.older.length > 0 && <motion.span id='older' variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0, transition: { delay: 0.7, duration: 0.4 } } }} animate={open ? 'visible' : 'hidden'} className='text-white font-medium mx-2 mb-8 flex flex-col gap-1'>
                         <p className='px-2 mb-2'>Last 30 Days</p>
                         {chats?.older.map((data) => {
+                            if (editChat == data.id) {
+                                return (
+                                    <span className='flex px-2 text-white rounded-md cursor-pointer w-full justify-between items-center gap-1'>
+                                        <input onChange={(e) => setChatName(e.target.value)} className='bg-[#49109a] w-full rounded-md px-1 py-1 text-white h-8' type="text" />
+                                        <span className='flex'>
+                                            <img onClick={() => { activateEdit("") }} className='h-6 cursor-pointer' src="/close.png" alt="" />
+                                            <img onClick={() => { handleChatpdate(data.id, chatName) }} className='h-6 cursor-pointer' src="/check.png" alt="" />
+                                        </span>
+                                    </span>
+                                )
+                            }
                             return (
                                 <span id={data.id} className='flex px-2 py-2  text-white rounded-md cursor-pointer w-full justify-between items-center' onClick={(e: any) => selectChat(e.currentTarget.id)} style={selectedChat == data.id ? { backgroundColor: "#49109a" } : undefined}>
                                     <p className='h-fit font-normal w-full'>{data.name}</p>
@@ -202,7 +260,7 @@ function Dashboard() {
                                             <span className='h-1 rounded-full w-1 bg-white' />
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent className='bg-[#340577] text-white'>
-                                            <DropdownMenuItem className='focus:bg-[#49109a] focus:text-white'>Edit</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => { activateEdit(data.id) }} className='focus:bg-[#49109a] focus:text-white'>Edit</DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem onClick={() => { handleDelete(data.id) }} className='focus:bg-[#49109a] focus:text-white'>Delete</DropdownMenuItem>
                                         </DropdownMenuContent>
@@ -212,7 +270,7 @@ function Dashboard() {
                         })}
                     </motion.span>}
                 </motion.div>
-                <motion.span className='bg-transparent' variants={{ hidden: { x: 0, y: 5 }, visible: { x: -70, y: 5, transition: { delay: 0.2, duration: 0.5 } } }} initial={open ? 'hidden' : 'visible'} whileInView={open ? 'visible' : 'hidden'}>
+                <motion.span className='bg-transparent h-fit' variants={{ hidden: { x: 0, y: 5 }, visible: { x: -70, y: 5, transition: { delay: 0.2, duration: 0.5 } } }} initial={open ? 'hidden' : 'visible'} whileInView={open ? 'visible' : 'hidden'}>
                     <Button className='w-fit mx-1 my-2 bg-transparent hover:bg-transparent flex flex-col items-start leading-3 shadow-none relative' onClick={() => setOpen((prev) => !prev)}>
                         <motion.span
                             variants={{ open: { rotate: 45, position: 'absolute', top: 10 }, closed: { rotate: 0, position: 'static', transition: { delay: 0.2, duration: 0.5 } } }}
