@@ -12,24 +12,28 @@ import {
 import { createChat, deleteChat, getChat, updateChat } from '@/actions/chat'
 import { useNavigate } from 'react-router-dom'
 import { Toaster } from "@/components/ui/toaster"
-import { getMessages } from '@/actions/message'
+import { createMessage, getMessages } from '@/actions/message'
 import { useToast } from '@/hooks/use-toast'
 
 
 function Dashboard() {
     const [open, setOpen] = useState(false)
-    const [selectedChat, selectChat] = useState("1")
+    const [selectedChat, selectChat] = useState("")
     const [prompt, setPrompt] = useState("")
     const { getToken } = useAuth()
     const [chats, setChats] = useState<{ today: { id: string, userid: string, created: Date, name: string, }[], yesterday: { id: string, userid: string, created: Date, name: string, }[], older: { id: string, userid: string, created: Date, name: string, }[] }>({ today: [], yesterday: [], older: [] })
-    const [message, setMessage] = useState<{ id: string, created: Date, userid: string, chatid: string, content: { prompt: string, yaml: string } }[]>()
+    const [message, setMessage] = useState<{ id: string, created: Date, userid: string, chatid: string, content: { prompt: string, yaml: string } }[]>([])
     const navigate = useNavigate()
     const { toast } = useToast()
     const [editChat, activateEdit] = useState('')
     const [chatName, setChatName] = useState('')
 
     useEffect(() => {
-        getPrompts()
+        Promise.resolve(getPrompts()).then((activeChat) => {
+            if (activeChat) {
+                getMessage(activeChat)
+            }
+        })
     }, [])
 
     const sortDate = (data: any, funType?: string) => {
@@ -91,6 +95,7 @@ function Dashboard() {
             }
         })
         setChats(updatedChat)
+        return updatedChat.today[0].id || updatedChat.yesterday[0].id || updatedChat.older[0].id
     }
 
     const getPrompts = async () => {
@@ -98,8 +103,8 @@ function Dashboard() {
         if (token) {
             const res = await getChat(token)
             if (res.data) {
-                sortDate(res.data)
-                return
+                const activeChat = sortDate(res.data)
+                return activeChat
             }
             toast({ description: res.message })
             return
@@ -112,7 +117,6 @@ function Dashboard() {
         if (token) {
             const res: { message: string, data: { id: string, userid: string, created: Date, name: string, }[] } = await createChat(token)
             if (res.data) {
-                console.log(res.data[0])
                 sortDate(res.data[0], 'add')
                 return
             }
@@ -150,18 +154,40 @@ function Dashboard() {
         navigate('/')
     }
 
-    const handleMessage = async (chatid: string) => {
+    const getMessage = async (chatid: string) => {
         const token = await getToken()
         if (token) {
             const res = await getMessages(token, chatid)
-            // if (res.data) {
-            //     const dummyMessages = chats || []
-            //     dummyMessages.push(res.data)
-            //     setChats(dummyMessages)
-            //     return
-            // }
+            if (res.data) {
+                const dummyMessages = [...message]
+                res.data.map((e: any) => {
+                    if (dummyMessages?.find((f) => { return f.id == e.id })) {
+                        return
+                    }
+                    dummyMessages.push(e)
+                })
+                setMessage(dummyMessages)
+                return
+            }
             toast({ description: res.message })
             return
+        }
+        navigate('/')
+    }
+
+    const handleMessage = async (chatid: string, prompt: string) => {
+        const token = await getToken()
+        if (token) {
+            const res = await createMessage(token, chatid, prompt)
+            if (res.data) {
+                const dummyMessages = [...message]
+                if (dummyMessages?.find((f) => { return f.id == res.data.id })) {
+                    return
+                }
+                dummyMessages.push(res.data)
+                setMessage(dummyMessages)
+                return
+            }
         }
         navigate('/')
     }
@@ -290,15 +316,21 @@ function Dashboard() {
                     </Button>
                 </motion.span>
             </div>
-            <div className='pl-10 mt-12 mx-auto pr-4  text-xs overflow-y-auto h-[78vh] min-[500px]:px-12 sm:px-16 md:text-sm md:px-20 lg:px-24 lg:w-[65vw] lg:text-base xl:w-[60vw]'>
-                <div className='flex mt-4 text-white gap-2 items-start lg:mt-6'>
-                    <div className='rounded-sm bg-[rgb(21,20,27)] bg-[linear-gradient(30deg,_rgba(21,20,27,1)_9%,_rgba(255,255,255,1)_87%)] w-4 h-4 mt-1 lg:w-5 lg:h-5 lg:mt-2' />
-                    <p className='w-fit'>Lorem ipsum dolor sit amet consectetur adipisicing elit. Praesentium, expedita nulla accusamus labore quas numquam repellat porro aperiam! Repellendus, corporis.</p>
-                </div>
-                <div className='flex mt-4 text-white gap-2 items-start lg:mt-6'>
-                    <div className='rounded-sm bg-clip-text text-transparent bg-gradient-to-r from-[#e151f7] to-[#5c47f5] font-medium tracking-widest lg:font-bold lg:tracking-wider'>AF</div>
-                    <p className='w-fit'>Lorem ipsum dolor sit amet consectetur adipisicing elit. Praesentium, expedita nulla accusamus labore quas numquam repellat porro aperiam! Repellendus, corporis.</p>
-                </div>
+            <div className='pl-10 mt-12 mx-auto pr-4 text-xs overflow-y-auto h-[78vh] min-[500px]:px-12 sm:px-16 md:text-sm md:px-20 lg:px-24 lg:w-[65vw] lg:text-base xl:w-[60vw]'>
+                {message.map((data) => {
+                    return (
+                        <div id={data.id}>
+                            <div className='flex mt-4 text-white gap-2 items-start lg:mt-6'>
+                                <div className='rounded-sm bg-[rgb(21,20,27)] bg-[linear-gradient(30deg,_rgba(21,20,27,1)_9%,_rgba(255,255,255,1)_87%)] w-4 h-4 mt-1 lg:w-5 lg:h-5 lg:mt-2' />
+                                <p className='w-fit'>{data.content.prompt}</p>
+                            </div>
+                            <div className='flex mt-4 text-white gap-2 items-start lg:mt-6'>
+                                <div className='rounded-sm bg-clip-text text-transparent bg-gradient-to-r from-[#e151f7] to-[#5c47f5] font-medium tracking-widest lg:font-bold lg:tracking-wider'>AF</div>
+                                <p className='w-fit'>{data.content.yaml}</p>
+                            </div>
+                        </div>
+                    )
+                })}
             </div>
             <motion.span
                 initial={{ opacity: 0, y: 80 }}
