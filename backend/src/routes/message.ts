@@ -5,16 +5,17 @@ const message = express.Router();
 
 message.get("/", async (req: Request, res: Response) => {
   try {
-    const { chatid } = req.params;
+    const { chatid } = req.query;
     const { userid } = await req.body;
     if (!userid || !chatid) {
       return res
-        .status(404)
+        .status(400)
         .json({ message: "Please provide the required data" });
     }
     const getUserMessage = `
-        SELECT message WHERE userid=$1 AND chatid=$2`;
-    const runQuery = query(getUserMessage, [userid, chatid]);
+        SELECT * FROM message WHERE userid=$1 AND chatid=$2`;
+    const runQuery = await query(getUserMessage, [userid, chatid]);
+    return res.json({ message: "Success", data: runQuery.rows[0] });
   } catch (error) {
     console.log(error);
     return res
@@ -25,18 +26,18 @@ message.get("/", async (req: Request, res: Response) => {
 
 message.post("/", async (req: Request, res: Response) => {
   try {
-    const {chatid} = req.query
+    const { chatid } = req.query;
     const { userPrompt, userid } = await req.body;
     if (!userid) {
       return res
-        .status(404)
+        .status(400)
         .json({ message: "Unauthorized: PLease Login/Signin" });
     }
     if (!chatid) {
-      return res.status(404).json({ message: "Please select a chat" });
+      return res.status(400).json({ message: "Please select a chat" });
     }
     if (!userPrompt) {
-      return res.status(404).json({ message: "Please provide a prompt" });
+      return res.status(400).json({ message: "Please provide a prompt" });
     }
     /* 
     Fetch model and generate a response here
@@ -52,11 +53,11 @@ message.post("/", async (req: Request, res: Response) => {
       chatid,
       `${JSON.stringify({ prompt: userPrompt, response: modelResponse })}`,
     ]);
-    return res.json({ message: 'Success', data: runQuery.rows[0] });
+    return res.json({ message: "Success", data: runQuery.rows[0] });
   } catch (error) {
     console.log(error);
     return res
-      .status(404)
+      .status(400)
       .json({ message: "Some error occured, please try again" });
   }
 });

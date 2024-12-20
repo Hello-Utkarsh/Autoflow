@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast'
 function Dashboard() {
     const [open, setOpen] = useState(false)
     const [selectedChat, selectChat] = useState("")
-    const [prompt, setPrompt] = useState("")
+    const [userPrompt, setPrompt] = useState("")
     const { getToken } = useAuth()
     const [chats, setChats] = useState<{ today: { id: string, userid: string, created: Date, name: string, }[], yesterday: { id: string, userid: string, created: Date, name: string, }[], older: { id: string, userid: string, created: Date, name: string, }[] }>({ today: [], yesterday: [], older: [] })
     const [message, setMessage] = useState<{ id: string, created: Date, userid: string, chatid: string, content: { prompt: string, yaml: string } }[]>([])
@@ -29,12 +29,16 @@ function Dashboard() {
     const [chatName, setChatName] = useState('')
 
     useEffect(() => {
-        Promise.resolve(getPrompts()).then((activeChat) => {
-            if (activeChat) {
-                getMessage(activeChat)
-            }
-        })
+        handleLoading()
     }, [])
+
+    const handleLoading = async () => {
+        const activeChat = await getPrompts()
+        if (activeChat) {
+            selectChat(activeChat)
+            await getMessage(activeChat)
+        }
+    }
 
     const sortDate = (data: any, funType?: string) => {
         const now = new Date()
@@ -95,7 +99,7 @@ function Dashboard() {
             }
         })
         setChats(updatedChat)
-        return updatedChat.today[0].id || updatedChat.yesterday[0].id || updatedChat.older[0].id
+        return updatedChat.today[0]?.id || updatedChat.yesterday[0]?.id || updatedChat.older[0]?.id
     }
 
     const getPrompts = async () => {
@@ -112,9 +116,9 @@ function Dashboard() {
         navigate('/')
     }
 
-    const handlePrompt = async () => {
+    const handlePrompt = async (chatid?: string, prompt?: string) => {
         const token = await getToken()
-        if (token) {
+        if (token && selectedChat == "") {
             const res: { message: string, data: { id: string, userid: string, created: Date, name: string, }[] } = await createChat(token)
             if (res.data) {
                 sortDate(res.data[0], 'add')
@@ -122,6 +126,18 @@ function Dashboard() {
             }
             toast({ description: res.message })
             return
+        }
+        if (token && chatid && prompt) {
+            const res = await createMessage(token, chatid, prompt)
+            if (res.data) {
+                const dummyMessages = [...message]
+                if (dummyMessages?.find((f) => { return f.id == res.data.id })) {
+                    return
+                }
+                dummyMessages.push(res.data)
+                setMessage(dummyMessages)
+                return
+            }
         }
         navigate('/')
     }
@@ -160,6 +176,7 @@ function Dashboard() {
             const res = await getMessages(token, chatid)
             if (res.data) {
                 const dummyMessages = [...message]
+                console.log(res.data)
                 res.data.map((e: any) => {
                     if (dummyMessages?.find((f) => { return f.id == e.id })) {
                         return
@@ -169,31 +186,14 @@ function Dashboard() {
                 setMessage(dummyMessages)
                 return
             }
-            toast({ description: res.message })
             return
-        }
-        navigate('/')
-    }
-
-    const handleMessage = async (chatid: string, prompt: string) => {
-        const token = await getToken()
-        if (token) {
-            const res = await createMessage(token, chatid, prompt)
-            if (res.data) {
-                const dummyMessages = [...message]
-                if (dummyMessages?.find((f) => { return f.id == res.data.id })) {
-                    return
-                }
-                dummyMessages.push(res.data)
-                setMessage(dummyMessages)
-                return
-            }
         }
         navigate('/')
     }
 
     return (
         <div className='bg-[rgb(21,20,27)] min-h-screen bg-[linear-gradient(15deg,_rgba(21,20,27,1)_9%,_rgba(22,19,37,1)_26%,_rgba(38,12,79,1)_50%,_rgba(52,5,119,1)_75%,_rgba(56,3,129,1)_87%)] relative flex lg:px-3'>
+            {/* SIDEBAR */}
             <div className='flex z-10 lg:mt-4 w-[60vw] sm:w-[45vw] md:w-[35vw] lg:w-[28vw] xl:w-[20rem] absolute'>
                 <motion.div initial={open ? 'hidden' : 'visible'} variants={{ hidden: { width: 0, opacity: 0 }, visible: { width: '100%', opacity: 1, transition: { duration: 0.5, delay: 0.2 } } }} animate={open ? 'visible' : 'hidden'} className='h-[100vh] bg-[#340577] overflow-y-auto rounded-md lg:h-[95vh] py-10'>
                     {chats?.today.length > 0 && <motion.span id='today' variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0, transition: { delay: 0.7, duration: 0.4 } } }} animate={open ? 'visible' : 'hidden'} className='text-white font-medium mx-2 mb-8 flex flex-col'>
@@ -211,7 +211,11 @@ function Dashboard() {
                                 )
                             }
                             return (
-                                <span id={data.id} className='flex px-2 py-2  text-white rounded-md cursor-pointer w-full justify-between items-center' onClick={(e: any) => selectChat(e.currentTarget.id)} style={selectedChat == data.id ? { backgroundColor: "#49109a" } : undefined}>
+                                <span id={data.id} className='flex px-2 py-2  text-white rounded-md cursor-pointer w-full justify-between items-center' onClick={async (e: any) => {
+                                    selectChat(e.currentTarget.id)
+                                    await getMessage(e.currentTarget.id)
+                                }
+                                } style={selectedChat == data.id ? { backgroundColor: "#49109a" } : undefined}>
                                     <p className='h-fit font-normal w-full'>{data.name}</p>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger className='flex gap-1 w-5 h-fit justify-between'>
@@ -244,7 +248,11 @@ function Dashboard() {
                                 )
                             }
                             return (
-                                <span id={data.id} className='flex px-2 py-2  text-white rounded-md cursor-pointer w-full justify-between items-center' onClick={(e: any) => selectChat(e.currentTarget.id)} style={selectedChat == data.id ? { backgroundColor: "#49109a" } : undefined}>
+                                <span id={data.id} className='flex px-2 py-2  text-white rounded-md cursor-pointer w-full justify-between items-center' onClick={async (e: any) => {
+                                    selectChat(e.currentTarget.id)
+                                    await getMessage(e.currentTarget.id)
+                                }
+                                } style={selectedChat == data.id ? { backgroundColor: "#49109a" } : undefined}>
                                     <p className='h-fit font-normal w-full'>{data.name}</p>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger className='flex gap-1 w-5 h-fit justify-between'>
@@ -277,7 +285,10 @@ function Dashboard() {
                                 )
                             }
                             return (
-                                <span id={data.id} className='flex px-2 py-2  text-white rounded-md cursor-pointer w-full justify-between items-center' onClick={(e: any) => selectChat(e.currentTarget.id)} style={selectedChat == data.id ? { backgroundColor: "#49109a" } : undefined}>
+                                <span id={data.id} className='flex px-2 py-2  text-white rounded-md cursor-pointer w-full justify-between items-center' onClick={async (e: any) => {
+                                    selectChat(e.currentTarget.id)
+                                    await getMessage(e.currentTarget.id)
+                                }} style={selectedChat == data.id ? { backgroundColor: "#49109a" } : undefined}>
                                     <p className='h-fit font-normal w-full'>{data.name}</p>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger className='flex gap-1 w-5 h-fit justify-between'>
@@ -316,6 +327,8 @@ function Dashboard() {
                     </Button>
                 </motion.span>
             </div>
+            {/* SIDEBAR */}
+            {/* MESSAGES */}
             <div className='pl-10 mt-12 mx-auto pr-4 text-xs overflow-y-auto h-[78vh] min-[500px]:px-12 sm:px-16 md:text-sm md:px-20 lg:px-24 lg:w-[65vw] lg:text-base xl:w-[60vw]'>
                 {message.map((data) => {
                     return (
@@ -332,6 +345,7 @@ function Dashboard() {
                     )
                 })}
             </div>
+            {/* MESSAGES */}
             <motion.span
                 initial={{ opacity: 0, y: 80 }}
                 viewport={{ once: true }}
@@ -339,11 +353,11 @@ function Dashboard() {
                 className='w-[84%] absolute bottom-6 left-[8%] flex gap-2 sm:w-[64%] sm:left-[18%] lg:w-[50%] lg:bottom-10 lg:left-[25%] lg:h-fit xl:w-[40%] xl:left-[30%]'>
                 <input onChange={(e) => setPrompt(e.target.value)} onKeyDown={(event: any) => {
                     if (event.key == 'Enter') {
-                        handlePrompt()
+                        handlePrompt(event.target.value)
                     }
                 }} type="text" className='bg-[#340577] w-full rounded-md px-1 py-1 text-white h-8' />
                 <div className="p-[1.5px] rounded-lg bg-gradient-to-r from-[#e151f7] to-[#5c47f5]">
-                    <Button onClick={handlePrompt} className="bg-black text-white rounded-lg h-8 px-3 text-xs lg:px-4 lg:py-2 lg:text-base">
+                    <Button onClick={() => handlePrompt(userPrompt)} className="bg-black text-white rounded-lg h-8 px-3 text-xs lg:px-4 lg:py-2 lg:text-base">
                         Generate
                     </Button>
                 </div>
